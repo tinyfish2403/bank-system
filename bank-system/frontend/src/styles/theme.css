@@ -6,10 +6,10 @@
 :root,
 html.dark {
   --bg-primary: #060918;
-  --bg-secondary: #0d1230;
-  --bg-tertiary: #141a38;
-  --bg-glass: rgba(13, 18, 48, 0.65);
-  --bg-glass-strong: rgba(20, 26, 56, 0.85);
+  --bg-secondary: #0a0f26;
+  --bg-tertiary: #111736;
+  --bg-glass: rgba(10, 15, 38, 0.7);
+  --bg-glass-strong: rgba(14, 20, 48, 0.88);
 
   /* --- Neon Accent Palette --- */
   --neon-cyan: #00d4ff;
@@ -26,21 +26,21 @@ html.dark {
   --text-muted: #5f6368;
 
   /* --- Glass Effect --- */
-  --glass-blur: 12px;
-  --glass-border: rgba(0, 212, 255, 0.12);
-  --glass-border-hover: rgba(0, 212, 255, 0.3);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-blur: 16px;
+  --glass-border: rgba(0, 212, 255, 0.1);
+  --glass-border-hover: rgba(0, 212, 255, 0.28);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 
   /* --- Glow Effects --- */
-  --glow-cyan: 0 0 12px rgba(0, 212, 255, 0.35), 0 0 24px rgba(0, 212, 255, 0.12);
-  --glow-blue: 0 0 12px rgba(59, 130, 246, 0.35);
-  --glow-purple: 0 0 12px rgba(168, 85, 247, 0.35);
-  --glow-green: 0 0 12px rgba(34, 197, 94, 0.35);
-  --glow-orange: 0 0 12px rgba(245, 158, 11, 0.35);
+  --glow-cyan: 0 0 12px rgba(0, 212, 255, 0.3), 0 0 24px rgba(0, 212, 255, 0.1);
+  --glow-blue: 0 0 12px rgba(59, 130, 246, 0.3);
+  --glow-purple: 0 0 12px rgba(168, 85, 247, 0.3);
+  --glow-green: 0 0 12px rgba(34, 197, 94, 0.3);
+  --glow-orange: 0 0 12px rgba(245, 158, 11, 0.3);
 
   /* --- Borders --- */
-  --border-color: rgba(0, 212, 255, 0.1);
-  --border-color-hover: rgba(0, 212, 255, 0.25);
+  --border-color: rgba(0, 212, 255, 0.08);
+  --border-color-hover: rgba(0, 212, 255, 0.22);
 
   /* --- Radius --- */
   --radius-sm: 6px;

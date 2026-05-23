@@ -2,13 +2,15 @@
    NovaBank Global Styles & Animations
    ============================================= */
 
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Courier New', monospace, sans-serif;
+  font-family: 'Fira Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
@@ -37,9 +39,14 @@ html, body {
   color: #fff;
 }
 
-/* --- Starfield Background --- */
+/* --- Enhanced Starfield + Subtle Grid Background --- */
 body {
+  background-color: var(--bg-primary);
   background-image:
+    /* Subtle grid */
+    linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px),
+    /* Starfield particles */
     radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.3), transparent),
     radial-gradient(1px 1px at 25% 45%, rgba(0,212,255,0.4), transparent),
     radial-gradient(2px 2px at 50% 70%, rgba(168,85,247,0.25), transparent),
@@ -53,8 +60,9 @@ body {
     radial-gradient(1px 1px at 77% 8%, rgba(255,255,255,0.25), transparent),
     radial-gradient(2px 2px at 33% 92%, rgba(0,212,255,0.2), transparent),
     radial-gradient(1px 1px at 90% 78%, rgba(168,85,247,0.2), transparent);
-  background-size: 200% 200%;
-  animation: starDrift 80s linear infinite;
+  background-size: 80px 80px, 80px 80px, 200% 200%;
+  background-position: 0 0, 0 0, 0 0;
+  animation: bgGridDrift 40s linear infinite, starDrift 80s linear infinite;
 }
 
 /* --- Scan Line Overlay --- */
@@ -66,8 +74,8 @@ body::after {
     0deg,
     transparent,
     transparent 3px,
-    rgba(0, 212, 255, 0.006) 3px,
-    rgba(0, 212, 255, 0.006) 6px
+    rgba(0, 212, 255, 0.005) 3px,
+    rgba(0, 212, 255, 0.005) 6px
   );
   pointer-events: none;
   z-index: 99999;
@@ -78,8 +86,13 @@ body::after {
    ============================================= */
 
 @keyframes starDrift {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 100% 100%; }
+  0% { background-position: 0% 0%, 0% 0%, 0% 0%; }
+  100% { background-position: 0% 0%, 0% 0%, 100% 100%; }
+}
+
+@keyframes bgGridDrift {
+  0% { background-position: 0 0, 0 0, 0% 0%; }
+  100% { background-position: 80px 80px, 80px 80px, 100% 100%; }
 }
 
 @keyframes pulseGlow {

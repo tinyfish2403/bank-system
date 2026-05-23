@@ -58,10 +58,10 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 
 const stats = reactive([
-  { color: '#409EFF', icon: 'User', label: '客户总数', value: 0 },
-  { color: '#22c55e', icon: 'CreditCard', label: '账户总数', value: 0 },
-  { color: '#f59e0b', icon: 'Money', label: '交易笔数', value: 0 },
-  { color: '#ef4444', icon: 'BankCard', label: '贷款笔数', value: 0 }
+  { color: 'var(--neon-blue)', icon: 'User', label: '客户总数', value: 0 },
+  { color: 'var(--neon-green)', icon: 'CreditCard', label: '账户总数', value: 0 },
+  { color: 'var(--neon-orange)', icon: 'Money', label: '交易笔数', value: 0 },
+  { color: 'var(--neon-red)', icon: 'BankCard', label: '贷款笔数', value: 0 }
 ])
 </script>
 
@@ -71,6 +71,7 @@ const stats = reactive([
 }
 .welcome-title {
   margin: 0 0 20px;
+  font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 22px;
   font-weight: 600;
   color: var(--text-primary);
@@ -107,8 +108,10 @@ const stats = reactive([
   font-size: 13px;
   color: var(--text-muted);
   margin-bottom: 4px;
+  letter-spacing: 1px;
 }
 .stat-value {
+  font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 28px;
   font-weight: 700;
   background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
@@ -119,9 +122,11 @@ const stats = reactive([
 
 .card-title {
   margin: 0 0 16px;
+  font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: 1px;
 }
 .quick-actions {
   display: flex;

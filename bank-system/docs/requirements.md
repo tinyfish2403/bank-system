@@ -1435,3 +1435,46 @@ interface TabItem {
 7. 客户详情点击编辑 → 打开新标签页（不关闭详情页）
 8. 标签页切换后表单内容/滚动位置保持（keep-alive 生效）
 9. 所有 Element Plus 组件（表格/按钮/弹窗/分页）自动匹配暗黑主题
+
+### 13.6 二次 UI 视觉升级（UI/UX Pro Max）
+
+> 更新时间：2026 年 5 月 23 日
+> 
+> 基于 UI/UX Pro Max 设计智能体分析，对前端视觉进行精细化打磨。
+
+#### 13.6.1 字体系统升级
+
+- **正文字体**：`Fira Sans`（Google Fonts）替代原有的 Segoe UI + Couier New 混合字体
+- **标题/数字/代码**：`Fira Code`（等宽字体）用于 Logo、仪表盘标题、统计数值
+- **回退字体**：保留 `PingFang SC`、`Microsoft YaHei` 确保中文显示
+- **引入方式**：`@import url()` 在 `global.css` 头部加载 Google Fonts
+
+#### 13.6.2 登录页全面重设计
+
+| 改进项 | 说明 |
+|--------|------|
+| Logo 图标 | `&#9670;` HTML 实体 → 内联 SVG 六边形银行图标（带浮动动画） |
+| 背景系统 | 5 层 CSS 背景叠加：渐变辉光 + 金融科技网格 + 发光节点（脉冲动画）+ 扫描线 + 呼吸光球 |
+| 数据流动线 | 4 条装饰性水平/垂直线（cyan/purple/blue 三色，独立动画节奏） |
+| 登录卡片 | 增强玻璃拟态（blur 20px）、inner glow 边框、弹性入场动画 |
+| 标题动画 | 3 色渐变（cyan→purple→cyan）+ shimmer 循环动画 |
+| 按钮光泽 | hover 时对角线光扫效果（`::before` translateX 动画） |
+| 输入框 | sci-fi 暗色输入框 + focus 时 cyan 辉光 + 图标颜色联动 |
+
+#### 13.6.3 全局视觉打磨
+
+- **星空背景增强**：在原有星点基础上叠加 80px 网格纹理，增加深度感
+- **玻璃拟态参数优化**：blur 12px→16px，背景不透明度微调，边框对比度增强
+- **仪表盘字体**：欢迎标题、统计数值、卡片标题均使用 Fira Code 等宽字体
+- **统计卡片颜色**：使用 CSS 变量 `var(--neon-*)` 替代硬编码 HEX，统一主题色管理
+- **侧边栏 Logo**：使用 Fira Code 字体增强品牌科技感
+
+#### 13.6.4 修改文件清单
+
+| 文件 | 改动内容 |
+|------|---------|
+| `src/styles/global.css` | 引入 Google Fonts（Fira Code + Fira Sans）、字体栈更新、增强星空网格背景、新增 `bgGridDrift` 动画、扫描线透明度微调 |
+| `src/styles/theme.css` | 玻璃态变量优化（`--glass-blur: 16px`、`--bg-glass`/`--bg-glass-strong` 透明度调整）、边框对比度增强 |
+| `src/views/login/Index.vue` | 339 行新增：5 层 CSS 背景系统、SVG 六边形 Logo、数据流动线（4 条）、卡片入场动画、按钮光泽扫描效果、输入框 sci-fi 风格深度定制 |
+| `src/views/dashboard/Index.vue` | Fira Code 字体应用于标题/统计数字/卡片标题、统计图标颜色变量化 |
+| `src/views/layout/Index.vue` | 侧边栏 Logo 文字使用 Fira Code 字体 |

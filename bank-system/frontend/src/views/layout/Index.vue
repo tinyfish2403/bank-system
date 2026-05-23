@@ -179,6 +179,7 @@ function handleLogout() {
   text-shadow: 0 0 12px rgba(0, 212, 255, 0.5);
 }
 .logo-text {
+  font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 2px;
