@@ -13,7 +13,7 @@
 - [四、数据库设计（含完整 DDL）](#四数据库设计含完整-ddl)
 - [五、Spring Security + JWT 认证方案](#五spring-security--jwt-认证方案)
 - [六、统一响应格式](#六统一响应格式)
-- [七、客户管理模块详细设计](#七客户管理模块详细设计)
+- [七、业务模块详细设计](#七业务模块详细设计)
 - [八、前端路由与布局设计](#八前端路由与布局设计)
 - [九、项目结构与包结构](#九项目结构与包结构)
 - [十、关键配置文件](#十关键配置文件)
@@ -90,6 +90,8 @@ Simple Bank System — 简易银行后台管理系统
 |------|------|------|
 | 系统管理（用户/角色/菜单） | **本期实现** | 登录认证、RBAC 权限管理 |
 | 客户管理 | **本期实现** | 客户信息的 CRUD + 分页查询 |
+| 授信管理 | **本期实现** | 授信申请 + 批复查询 |
+| 合同管理 | **本期实现** | 合同签订/变更/作废 |
 | 仪表盘 | **本期实现** | 登录后的首页，展示统计数据 |
 | 账户管理 | 预留入口 | 仅前端菜单占位，后端接口预留 |
 | 交易管理 | 预留入口 | 仅前端菜单占位，后端接口预留 |
@@ -112,6 +114,24 @@ Simple Bank System — 简易银行后台管理系统
 - 编辑客户
 - 查看客户详情
 - 删除客户（逻辑删除）
+
+### 3.4 授信管理模块
+
+- 授信申请列表（分页、模糊搜索）
+- 新增授信申请（关联客户）
+- 编辑授信申请（仅待审批状态可修改）
+- 查看授信申请详情
+- 审批授信申请（生成批复记录）
+- 批复查询列表（分页、按状态/客户筛选）
+- 查看批复详情
+
+### 3.5 合同管理模块
+
+- 合同列表（分页、模糊搜索）
+- 合同签订（须关联有效批复）
+- 合同变更（修改合同金额、类型等）
+- 合同作废（状态置为作废）
+- 查看合同详情
 
 ---
 
@@ -305,6 +325,81 @@ CREATE TABLE loan (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='贷款表';
 ```
 
+#### 4.2.10 授信申请表 credit_application
+
+```sql
+DROP TABLE IF EXISTS credit_application;
+CREATE TABLE credit_application (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    application_no  VARCHAR(32)     NOT NULL COMMENT '申请编号',
+    customer_id     BIGINT          NOT NULL COMMENT '客户ID',
+    credit_amount   DECIMAL(18,2)   NOT NULL COMMENT '申请授信金额',
+    credit_type     VARCHAR(20)     NOT NULL COMMENT '授信类型：WORKING-流动资金 LOAN-贷款 GUARANTEE-担保',
+    purpose         VARCHAR(500)    DEFAULT NULL COMMENT '申请用途',
+    status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1-待审批 2-已批复 3-已拒绝',
+    apply_time      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：1-已删除 0-未删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_application_no (application_no),
+    KEY idx_customer_id (customer_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='授信申请表';
+```
+
+#### 4.2.11 授信批复表 credit_approval
+
+```sql
+DROP TABLE IF EXISTS credit_approval;
+CREATE TABLE credit_approval (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    approval_no     VARCHAR(32)     NOT NULL COMMENT '批复编号',
+    application_id  BIGINT          NOT NULL COMMENT '授信申请ID',
+    customer_id     BIGINT          NOT NULL COMMENT '客户ID',
+    approved_amount DECIMAL(18,2)   NOT NULL COMMENT '批复金额',
+    credit_limit    DECIMAL(18,2)   NOT NULL COMMENT '授信额度',
+    start_date      DATE            NOT NULL COMMENT '有效期开始',
+    end_date        DATE            NOT NULL COMMENT '有效期结束',
+    status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1-有效 2-已过期 3-已撤销',
+    approval_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '批复时间',
+    remark          VARCHAR(500)    DEFAULT NULL COMMENT '批复意见',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：1-已删除 0-未删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_approval_no (approval_no),
+    KEY idx_application_id (application_id),
+    KEY idx_customer_id (customer_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='授信批复表';
+```
+
+#### 4.2.12 合同表 contract
+
+```sql
+DROP TABLE IF EXISTS contract;
+CREATE TABLE contract (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    contract_no     VARCHAR(32)     NOT NULL COMMENT '合同编号',
+    approval_id     BIGINT          NOT NULL COMMENT '授信批复ID',
+    customer_id     BIGINT          NOT NULL COMMENT '客户ID',
+    contract_amount DECIMAL(18,2)   NOT NULL COMMENT '合同金额',
+    contract_type   VARCHAR(20)     NOT NULL COMMENT '合同类型：CREDIT-授信合同 LOAN-贷款合同 GUARANTEE-担保合同',
+    sign_date       DATE            NOT NULL COMMENT '签订日期',
+    status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1-有效 2-已变更 3-已作废',
+    remark          VARCHAR(500)    DEFAULT NULL COMMENT '备注',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：1-已删除 0-未删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_contract_no (contract_no),
+    KEY idx_approval_id (approval_id),
+    KEY idx_customer_id (customer_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='合同表';
+```
+
 ### 4.3 初始化数据
 
 ```sql
@@ -339,13 +434,21 @@ INSERT INTO sys_menu (id, parent_id, menu_name, path, component, icon, menu_type
 (5,  0, '贷款管理', NULL,             NULL,                    'BankCard',        1, 5, NULL),
 (6,  0, '报表统计', NULL,             NULL,                    'DataAnalysis',    1, 6, NULL),
 (7,  0, '系统管理', NULL,             NULL,                    'Setting',         1, 7, NULL),
+(8,  0, '授信管理', NULL,             NULL,                    'FolderOpened',    1, 8, NULL),
+(9,  0, '合同管理', NULL,             NULL,                    'DocumentCopy',    1, 9, NULL),
 -- 客户管理子菜单
 (21, 2, '客户列表', '/customer/list', 'customer/List.vue',     'List',            2, 1, 'customer:list'),
 (22, 2, '新增客户', '/customer/add',  'customer/Form.vue',     'Plus',            2, 2, 'customer:add'),
 -- 系统管理子菜单
 (71, 7, '用户管理', '/system/user',   'system/UserList.vue',   'UserFilled',      2, 1, 'system:user'),
 (72, 7, '角色管理', '/system/role',   'system/RoleList.vue',   'Avatar',          2, 2, 'system:role'),
-(73, 7, '菜单管理', '/system/menu',   'system/MenuList.vue',   'Menu',            2, 3, 'system:menu');
+(73, 7, '菜单管理', '/system/menu',   'system/MenuList.vue',   'Menu',            2, 3, 'system:menu'),
+-- 授信管理子菜单
+(81, 8, '授信申请', '/credit/application/list', 'credit/ApplicationList.vue', 'Document', 2, 1, 'credit:application'),
+(82, 8, '批复查询', '/credit/approval/list',    'credit/ApprovalList.vue',    'Checked',   2, 2, 'credit:approval'),
+-- 合同管理子菜单
+(91, 9, '合同列表', '/contract/list', 'contract/List.vue',     'Tickets',         2, 1, 'contract:list'),
+(92, 9, '合同签订', '/contract/add',  'contract/Form.vue',     'EditPen',         2, 2, 'contract:add');
 
 -- 为 admin 角色分配所有菜单权限
 INSERT INTO sys_role_menu (role_id, menu_id)
@@ -553,7 +656,7 @@ public enum ResultCode {
 
 ---
 
-## 七、客户管理模块详细设计
+## 七、业务模块详细设计
 
 ### 7.1 API 接口列表
 
@@ -863,6 +966,450 @@ public class CustomerVO {
 
 ---
 
+### 7.6 授信管理模块
+
+#### 7.6.1 API 接口列表
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| GET | `/api/credit/applications` | 分页查询授信申请列表 | `credit:application` |
+| GET | `/api/credit/applications/{id}` | 获取授信申请详情 | `credit:application` |
+| POST | `/api/credit/applications` | 新增授信申请 | `credit:application` |
+| PUT | `/api/credit/applications/{id}` | 更新授信申请（仅待审批状态） | `credit:application` |
+| POST | `/api/credit/applications/{id}/approve` | 审批授信申请（生成批复） | `credit:approval` |
+| GET | `/api/credit/approvals` | 分页查询批复列表 | `credit:approval` |
+| GET | `/api/credit/approvals/{id}` | 获取批复详情 | `credit:approval` |
+
+#### 7.6.2 接口详细定义
+
+**分页查询授信申请列表:**
+
+```
+GET /api/credit/applications?page=1&size=10&keyword=张三&status=1
+Authorization: Bearer <token>
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否，默认 1 | 当前页码 |
+| size | int | 否，默认 10 | 每页条数 |
+| keyword | String | 否 | 按客户姓名、申请编号模糊搜索 |
+| status | int | 否 | 按状态筛选：1-待审批 2-已批复 3-已拒绝 |
+
+**响应:**
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "records": [
+      {
+        "id": 1,
+        "applicationNo": "CA202605230001",
+        "customerId": 1,
+        "customerName": "张三",
+        "creditAmount": 500000.00,
+        "creditType": "WORKING",
+        "purpose": "企业经营流动资金周转",
+        "status": 1,
+        "applyTime": "2026-05-23 10:00:00"
+      }
+    ],
+    "total": 50,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+**新增授信申请:**
+
+```
+POST /api/credit/applications
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "creditAmount": 500000.00,
+  "creditType": "WORKING",
+  "purpose": "企业经营流动资金周转"
+}
+```
+
+**审批授信申请（生成批复）:**
+
+```
+POST /api/credit/applications/{id}/approve
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "approvedAmount": 400000.00,
+  "creditLimit": 400000.00,
+  "startDate": "2026-05-23",
+  "endDate": "2027-05-23",
+  "remark": "经审核同意授信"
+}
+```
+
+**分页查询批复列表:**
+
+```
+GET /api/credit/approvals?page=1&size=10&keyword=张三&status=1
+Authorization: Bearer <token>
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否，默认 1 | 当前页码 |
+| size | int | 否，默认 10 | 每页条数 |
+| keyword | String | 否 | 按客户姓名、批复编号模糊搜索 |
+| status | int | 否 | 按状态筛选：1-有效 2-已过期 3-已撤销 |
+
+**响应:**
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "records": [
+      {
+        "id": 1,
+        "approvalNo": "AP202605230001",
+        "applicationId": 1,
+        "applicationNo": "CA202605230001",
+        "customerId": 1,
+        "customerName": "张三",
+        "approvedAmount": 400000.00,
+        "creditLimit": 400000.00,
+        "startDate": "2026-05-23",
+        "endDate": "2027-05-23",
+        "status": 1,
+        "approvalTime": "2026-05-23 14:00:00",
+        "remark": "经审核同意授信"
+      }
+    ],
+    "total": 20,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+#### 7.6.3 业务规则与校验
+
+| 规则 | 校验时机 | 说明 |
+|------|---------|------|
+| 客户ID必填 | 新增 | `@NotNull` |
+| 授信金额 > 0 | 新增/更新 | `@DecimalMin(value = "0.01")` |
+| 授信类型必填 | 新增 | `@NotBlank`，枚举值校验 |
+| 仅待审批状态可编辑 | 更新 | status=1 才允许修改 |
+| 仅待审批状态可审批 | 审批 | status=1 才允许审批 |
+| 审批后自动生成批复编号 | 审批 | 规则: `AP` + yyyyMMdd + 4位序号 |
+| 批复金额 ≤ 申请金额 | 审批 | 业务校验 |
+| 批复有效期开始 ≤ 结束 | 审批 | `startDate <= endDate` |
+| 申请编号自动生成 | 新增 | 规则: `CA` + yyyyMMdd + 4位序号 |
+
+#### 7.6.4 后端 DTO 定义
+
+**CreditApplicationCreateDTO:**
+
+```java
+public class CreditApplicationCreateDTO {
+    @NotNull(message = "客户ID不能为空")
+    private Long customerId;
+
+    @NotNull(message = "授信金额不能为空")
+    @DecimalMin(value = "0.01", message = "授信金额必须大于0")
+    private BigDecimal creditAmount;
+
+    @NotBlank(message = "授信类型不能为空")
+    private String creditType;  // WORKING / LOAN / GUARANTEE
+
+    @Size(max = 500, message = "用途描述不能超过500字符")
+    private String purpose;
+}
+```
+
+**CreditApprovalDTO（审批请求体）:**
+
+```java
+public class CreditApprovalDTO {
+    @NotNull(message = "批复金额不能为空")
+    @DecimalMin(value = "0.01", message = "批复金额必须大于0")
+    private BigDecimal approvedAmount;
+
+    @NotNull(message = "授信额度不能为空")
+    @DecimalMin(value = "0.01", message = "授信额度必须大于0")
+    private BigDecimal creditLimit;
+
+    @NotNull(message = "有效期开始日期不能为空")
+    private LocalDate startDate;
+
+    @NotNull(message = "有效期结束日期不能为空")
+    private LocalDate endDate;
+
+    @Size(max = 500, message = "批复意见不能超过500字符")
+    private String remark;
+}
+```
+
+#### 7.6.5 前端页面设计
+
+**授信申请列表页 `credit/ApplicationList.vue`:**
+
+```
+┌─────────────────────────────────────────────────┐
+│  搜索区域                                        │
+│  ┌──────────────────────┬──────────┬─────────┐  │
+│  │ 关键字（客户/申请编号） │ 状态下拉  │ [查询] [重置] │
+│  └──────────────────────┴──────────┴─────────┘  │
+├─────────────────────────────────────────────────┤
+│  操作栏                                         │
+│  [+ 新增授信申请]                                │
+├─────────────────────────────────────────────────┤
+│  数据表格                                        │
+│  申请编号 | 客户 | 授信金额 | 类型 | 状态 | 申请时间 | 操作 │
+│  ────────────────────────────────────────────── │
+│  CA...   | 张三 | 500,000 | 流动资金 | 待审批 | 05-23 | 详情/编辑/审批│
+├─────────────────────────────────────────────────┤
+│  分页组件                                        │
+└─────────────────────────────────────────────────┘
+```
+
+**批复查询列表页 `credit/ApprovalList.vue`:**
+
+```
+┌─────────────────────────────────────────────────┐
+│  搜索区域                                        │
+│  ┌──────────────────────┬──────────┬─────────┐  │
+│  │ 关键字（客户/批复编号） │ 状态下拉  │ [查询] [重置] │
+│  └──────────────────────┴──────────┴─────────┘  │
+├─────────────────────────────────────────────────┤
+│  数据表格                                        │
+│  批复编号 | 申请编号 | 客户 | 批复金额 | 额度 | 有效期 | 状态 | 操作 │
+│  ────────────────────────────────────────────── │
+│  AP...   | CA...   | 张三 | 400,000 | 400k | 05-23~05-24 | 有效 | 详情│
+├─────────────────────────────────────────────────┤
+│  分页组件                                        │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+### 7.7 合同管理模块
+
+#### 7.7.1 API 接口列表
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| GET | `/api/contracts` | 分页查询合同列表 | `contract:list` |
+| GET | `/api/contracts/{id}` | 获取合同详情 | `contract:list` |
+| POST | `/api/contracts` | 签订合同（须关联有效批复） | `contract:add` |
+| PUT | `/api/contracts/{id}` | 合同变更 | `contract:add` |
+| PUT | `/api/contracts/{id}/cancel` | 合同作废 | `contract:add` |
+
+#### 7.7.2 接口详细定义
+
+**分页查询合同列表:**
+
+```
+GET /api/contracts?page=1&size=10&keyword=张三&status=1
+Authorization: Bearer <token>
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否，默认 1 | 当前页码 |
+| size | int | 否，默认 10 | 每页条数 |
+| keyword | String | 否 | 按客户姓名、合同编号模糊搜索 |
+| status | int | 否 | 按状态筛选：1-有效 2-已变更 3-已作废 |
+
+**响应:**
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "records": [
+      {
+        "id": 1,
+        "contractNo": "CT202605230001",
+        "approvalId": 1,
+        "approvalNo": "AP202605230001",
+        "customerId": 1,
+        "customerName": "张三",
+        "contractAmount": 400000.00,
+        "contractType": "CREDIT",
+        "signDate": "2026-05-23",
+        "status": 1,
+        "remark": null
+      }
+    ],
+    "total": 30,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+**签订合同:**
+
+```
+POST /api/contracts
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "approvalId": 1,
+  "contractAmount": 400000.00,
+  "contractType": "CREDIT",
+  "signDate": "2026-05-23",
+  "remark": ""
+}
+```
+
+**合同变更:**
+
+```
+PUT /api/contracts/{id}
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "contractAmount": 350000.00,
+  "contractType": "CREDIT",
+  "remark": "经双方协商变更合同金额"
+}
+```
+
+**合同作废:**
+
+```
+PUT /api/contracts/{id}/cancel
+Authorization: Bearer <token>
+```
+
+**响应:**
+
+```json
+{
+  "code": 200,
+  "message": "合同已作废",
+  "data": null
+}
+```
+
+#### 7.7.3 业务规则与校验
+
+| 规则 | 校验时机 | 说明 |
+|------|---------|------|
+| 批复ID必填 | 签订 | `@NotNull`，须关联有效的授信批复 |
+| 批复必须有效 | 签订 | approval.status=1 且在有效期内 |
+| 同一批复只能签订一份合同 | 签订 | 一个 approval_id 只能有一个有效/已变更状态的合同 |
+| 合同金额 > 0 | 签订/变更 | `@DecimalMin(value = "0.01")` |
+| 合同金额 ≤ 批复额度 | 签订 | 业务校验 |
+| 合同类型必填 | 签订/变更 | 枚举值校验 |
+| 仅有效状态可变更 | 变更 | status=1 |
+| 仅有效状态可作废 | 作废 | status=1 |
+| 已作废合同不可恢复 | 作废 | 作废为终态 |
+| 合同编号自动生成 | 签订 | 规则: `CT` + yyyyMMdd + 4位序号 |
+
+#### 7.7.4 后端 DTO 定义
+
+**ContractCreateDTO:**
+
+```java
+public class ContractCreateDTO {
+    @NotNull(message = "授信批复ID不能为空")
+    private Long approvalId;
+
+    @NotNull(message = "合同金额不能为空")
+    @DecimalMin(value = "0.01", message = "合同金额必须大于0")
+    private BigDecimal contractAmount;
+
+    @NotBlank(message = "合同类型不能为空")
+    private String contractType;  // CREDIT / LOAN / GUARANTEE
+
+    @NotNull(message = "签订日期不能为空")
+    private LocalDate signDate;
+
+    @Size(max = 500, message = "备注不能超过500字符")
+    private String remark;
+}
+```
+
+**ContractUpdateDTO:**
+
+```java
+public class ContractUpdateDTO {
+    @NotNull(message = "合同金额不能为空")
+    @DecimalMin(value = "0.01", message = "合同金额必须大于0")
+    private BigDecimal contractAmount;
+
+    @NotBlank(message = "合同类型不能为空")
+    private String contractType;
+
+    @Size(max = 500, message = "备注不能超过500字符")
+    private String remark;
+}
+```
+
+#### 7.7.5 前端页面设计
+
+**合同列表页 `contract/List.vue`:**
+
+```
+┌─────────────────────────────────────────────────┐
+│  搜索区域                                        │
+│  ┌──────────────────────┬──────────┬─────────┐  │
+│  │ 关键字（客户/合同编号） │ 状态下拉  │ [查询] [重置] │
+│  └──────────────────────┴──────────┴─────────┘  │
+├─────────────────────────────────────────────────┤
+│  操作栏                                         │
+│  [+ 签订合同]                                    │
+├─────────────────────────────────────────────────┤
+│  数据表格                                        │
+│  合同编号 | 批复编号 | 客户 | 金额 | 类型 | 签订日期 | 状态 | 操作 │
+│  ────────────────────────────────────────────── │
+│  CT...   | AP...   | 张三 | 400k | 授信 | 05-23   | 有效 | 详情/变更/作废│
+├─────────────────────────────────────────────────┤
+│  分页组件                                        │
+└─────────────────────────────────────────────────┘
+```
+
+**交互说明:**
+- 点击"签订合同"跳转到 `/contract/add`，选择有效批复后填写合同信息
+- "变更"仅有效状态合同可操作，跳转编辑页 `/contract/:id/edit`
+- "作废"弹出二次确认（el-message-box），确认后调用作废接口
+- 作废和已变更的合同行操作按钮置灰
+
+**合同表单页 `contract/Form.vue`:**
+
+```
+┌─────────────────────────────────────────────────┐
+│  < 返回列表   签订合同 / 变更合同              │
+├─────────────────────────────────────────────────┤
+│  表单（el-form）                                │
+│  ┌─────────────────────────────────────┐       │
+│  │ 关联批复:   [选择有效批复...] (签订时可下拉) │       │
+│  │ 客户名称:   [自动带入]              │       │
+│  │ 合同金额:   [____________] (≤批复额度)│       │
+│  │ 合同类型:   [下拉选择]              │       │
+│  │ 签订日期:   [日期选择器]            │       │
+│  │ 备注:       [____________]          │       │
+│  └─────────────────────────────────────┘       │
+│                                                 │
+│  [保存] [取消]                                  │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
 ## 八、前端路由与布局设计
 
 ### 8.1 路由表
@@ -879,6 +1426,16 @@ public class CustomerVO {
 | `/system/user` | `system/UserList.vue` | SystemUser | `{ title: '用户管理', icon: 'UserFilled' }` | 用户管理 |
 | `/system/role` | `system/RoleList.vue` | SystemRole | `{ title: '角色管理', icon: 'Avatar' }` | 角色管理 |
 | `/system/menu` | `system/MenuList.vue` | SystemMenu | `{ title: '菜单管理', icon: 'Menu' }` | 菜单管理 |
+| `/credit/application/list` | `credit/ApplicationList.vue` | CreditAppList | `{ title: '授信申请', icon: 'Document' }` | 授信申请列表 |
+| `/credit/application/add` | `credit/ApplicationForm.vue` | CreditAppAdd | `{ title: '新增授信申请', hidden: true }` | 新增授信申请 |
+| `/credit/application/:id` | `credit/ApplicationDetail.vue` | CreditAppDetail | `{ title: '授信申请详情', hidden: true }` | 申请详情 |
+| `/credit/application/:id/edit` | `credit/ApplicationForm.vue` | CreditAppEdit | `{ title: '编辑授信申请', hidden: true }` | 编辑申请 |
+| `/credit/approval/list` | `credit/ApprovalList.vue` | CreditApprovalList | `{ title: '批复查询', icon: 'Checked' }` | 批复列表 |
+| `/credit/approval/:id` | `credit/ApprovalDetail.vue` | CreditApprovalDetail | `{ title: '批复详情', hidden: true }` | 批复详情 |
+| `/contract/list` | `contract/List.vue` | ContractList | `{ title: '合同列表', icon: 'Tickets' }` | 合同列表 |
+| `/contract/add` | `contract/Form.vue` | ContractAdd | `{ title: '签订合同', hidden: true }` | 签订合同 |
+| `/contract/:id` | `contract/Detail.vue` | ContractDetail | `{ title: '合同详情', hidden: true }` | 合同详情 |
+| `/contract/:id/edit` | `contract/Form.vue` | ContractEdit | `{ title: '合同变更', hidden: true }` | 合同变更 |
 
 ### 8.2 路由实现方式
 
@@ -985,6 +1542,16 @@ bank-system/
 │       │   │   ├── List.vue
 │       │   │   ├── Form.vue
 │       │   │   └── Detail.vue
+│       │   ├── credit/
+│       │   │   ├── ApplicationList.vue
+│       │   │   ├── ApplicationForm.vue
+│       │   │   ├── ApplicationDetail.vue
+│       │   │   ├── ApprovalList.vue
+│       │   │   └── ApprovalDetail.vue
+│       │   ├── contract/
+│       │   │   ├── List.vue
+│       │   │   ├── Form.vue
+│       │   │   └── Detail.vue
 │       │   └── system/
 │       │       ├── UserList.vue
 │       │       ├── RoleList.vue
@@ -1000,13 +1567,13 @@ bank-system/
 | 包路径 | 说明 | 主要内容 |
 |--------|------|---------|
 | `config/` | 配置类 | `SecurityConfig`、`MyBatisPlusConfig`、`CorsConfig` |
-| `controller/` | REST 控制器 | `AuthController`、`CustomerController` |
-| `service/` | 业务接口 | `CustomerService`、`UserService` |
-| `service/impl/` | 业务实现 | `CustomerServiceImpl`、`UserServiceImpl` |
-| `mapper/` | MyBatis-Plus Mapper | `CustomerMapper`、`UserMapper`、`RoleMapper`、`MenuMapper` |
-| `entity/` | 数据库实体 | `Customer`、`SysUser`、`SysRole`、`SysMenu`（使用 `@TableLogic` 逻辑删除） |
-| `dto/` | 数据传输对象 | `CustomerCreateDTO`、`CustomerUpdateDTO`、`CustomerQueryDTO`、`LoginDTO` |
-| `vo/` | 视图对象 | `CustomerVO`、`UserInfoVO`、`MenuVO` |
+| `controller/` | REST 控制器 | `AuthController`、`CustomerController`、`CreditController`、`ContractController` |
+| `service/` | 业务接口 | `CustomerService`、`UserService`、`CreditService`、`ContractService` |
+| `service/impl/` | 业务实现 | `CustomerServiceImpl`、`UserServiceImpl`、`CreditServiceImpl`、`ContractServiceImpl` |
+| `mapper/` | MyBatis-Plus Mapper | `CustomerMapper`、`UserMapper`、`RoleMapper`、`MenuMapper`、`CreditApplicationMapper`、`CreditApprovalMapper`、`ContractMapper` |
+| `entity/` | 数据库实体 | `Customer`、`SysUser`、`SysRole`、`SysMenu`、`CreditApplication`、`CreditApproval`、`Contract`（使用 `@TableLogic` 逻辑删除） |
+| `dto/` | 数据传输对象 | `CustomerCreateDTO`、`CustomerUpdateDTO`、`CustomerQueryDTO`、`LoginDTO`、`CreditApplicationCreateDTO`、`CreditApprovalDTO`、`ContractCreateDTO`、`ContractUpdateDTO` |
+| `vo/` | 视图对象 | `CustomerVO`、`UserInfoVO`、`MenuVO`、`CreditApplicationVO`、`CreditApprovalVO`、`ContractVO` |
 | `common/` | 通用类 | `Result<T>`、`ResultCode`、`GlobalExceptionHandler`、`BusinessException` |
 | `security/` | 安全相关 | `JwtTokenProvider`、`JwtAuthenticationFilter`、`UserDetailsServiceImpl` |
 
@@ -1017,6 +1584,8 @@ bank-system/
 | `api/request.ts` | Axios 实例，baseURL 配置，请求拦截器（加 token），响应拦截器（401 处理） |
 | `api/auth.ts` | `login()`、`getUserInfo()` |
 | `api/customer.ts` | `getCustomerList()`、`getCustomerById()`、`createCustomer()`、`updateCustomer()`、`deleteCustomer()` |
+| `api/credit.ts` | `getApplicationList()`、`getApplicationById()`、`createApplication()`、`updateApplication()`、`approveApplication()`、`getApprovalList()`、`getApprovalById()` |
+| `api/contract.ts` | `getContractList()`、`getContractById()`、`createContract()`、`updateContract()`、`cancelContract()` |
 | `stores/auth.ts` | Pinia store，管理 token、userInfo、menus，提供 `doLogin()`、`fetchUserInfo()`、`doLogout()` action |
 | `stores/app.ts` | Pinia store，管理 sidebarCollapsed 等全局状态 |
 | `stores/tabs.ts` | Pinia store，管理标签页（tabs[]、activeTab），提供 `openTab()`、`closeTab()`、`setActiveTab()`、`syncFromRoute()` 等 action，计算 `cachedViewNames` 供 keep-alive 使用 |
@@ -1385,14 +1954,24 @@ interface TabItem {
 
 ```
 / → Layout (容器)
-  ├── /dashboard       → 仪表盘（affix 固定标签）
-  ├── /customer/list   → 客户列表
-  ├── /customer/add    → 新增客户
-  ├── /customer/:id    → 客户详情（hidden，不在侧边栏显示）
-  ├── /customer/:id/edit → 编辑客户（hidden）
-  ├── /system/user     → 用户管理
-  ├── /system/role     → 角色管理
-  └── /system/menu     → 菜单管理
+  ├── /dashboard                → 仪表盘（affix 固定标签）
+  ├── /customer/list            → 客户列表
+  ├── /customer/add             → 新增客户
+  ├── /customer/:id             → 客户详情（hidden，不在侧边栏显示）
+  ├── /customer/:id/edit        → 编辑客户（hidden）
+  ├── /credit/application/list  → 授信申请列表
+  ├── /credit/application/add   → 新增授信申请（hidden）
+  ├── /credit/application/:id   → 授信申请详情（hidden）
+  ├── /credit/application/:id/edit → 编辑授信申请（hidden）
+  ├── /credit/approval/list     → 批复查询列表
+  ├── /credit/approval/:id      → 批复详情（hidden）
+  ├── /contract/list            → 合同列表
+  ├── /contract/add             → 签订合同（hidden）
+  ├── /contract/:id             → 合同详情（hidden）
+  ├── /contract/:id/edit        → 合同变更（hidden）
+  ├── /system/user              → 用户管理
+  ├── /system/role              → 角色管理
+  └── /system/menu              → 菜单管理
 ```
 
 ### 13.4 新增/修改文件清单

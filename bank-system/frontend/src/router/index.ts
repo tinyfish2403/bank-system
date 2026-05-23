@@ -45,6 +45,66 @@ const staticRoutes: RouteRecordRaw[] = [
         meta: { title: '编辑客户', icon: 'Edit', hidden: true }
       },
       {
+        path: 'credit/application/list',
+        name: 'CreditAppList',
+        component: () => import('@/views/credit/ApplicationList.vue'),
+        meta: { title: '授信申请', icon: 'Document' }
+      },
+      {
+        path: 'credit/application/add',
+        name: 'CreditAppAdd',
+        component: () => import('@/views/credit/ApplicationForm.vue'),
+        meta: { title: '新增授信申请', icon: 'Document', hidden: true }
+      },
+      {
+        path: 'credit/application/:id',
+        name: 'CreditAppDetail',
+        component: () => import('@/views/credit/ApplicationDetail.vue'),
+        meta: { title: '授信申请详情', icon: 'View', hidden: true }
+      },
+      {
+        path: 'credit/application/:id/edit',
+        name: 'CreditAppEdit',
+        component: () => import('@/views/credit/ApplicationForm.vue'),
+        meta: { title: '编辑授信申请', icon: 'Edit', hidden: true }
+      },
+      {
+        path: 'credit/approval/list',
+        name: 'CreditApprovalList',
+        component: () => import('@/views/credit/ApprovalList.vue'),
+        meta: { title: '批复查询', icon: 'Checked' }
+      },
+      {
+        path: 'credit/approval/:id',
+        name: 'CreditApprovalDetail',
+        component: () => import('@/views/credit/ApprovalDetail.vue'),
+        meta: { title: '批复详情', icon: 'View', hidden: true }
+      },
+      {
+        path: 'contract/list',
+        name: 'ContractList',
+        component: () => import('@/views/contract/List.vue'),
+        meta: { title: '合同列表', icon: 'Tickets' }
+      },
+      {
+        path: 'contract/add',
+        name: 'ContractAdd',
+        component: () => import('@/views/contract/Form.vue'),
+        meta: { title: '签订合同', icon: 'EditPen', hidden: true }
+      },
+      {
+        path: 'contract/:id',
+        name: 'ContractDetail',
+        component: () => import('@/views/contract/Detail.vue'),
+        meta: { title: '合同详情', icon: 'View', hidden: true }
+      },
+      {
+        path: 'contract/:id/edit',
+        name: 'ContractEdit',
+        component: () => import('@/views/contract/Form.vue'),
+        meta: { title: '合同变更', icon: 'Edit', hidden: true }
+      },
+      {
         path: 'system/user',
         name: 'SystemUser',
         component: () => import('@/views/system/UserList.vue'),

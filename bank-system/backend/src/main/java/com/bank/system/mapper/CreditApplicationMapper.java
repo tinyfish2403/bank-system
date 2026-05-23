@@ -1,0 +1,9 @@
+package com.bank.system.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.bank.system.entity.CreditApplication;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface CreditApplicationMapper extends BaseMapper<CreditApplication> {
+}

@@ -7,6 +7,9 @@ DROP TABLE IF EXISTS sys_user_role;
 DROP TABLE IF EXISTS sys_menu;
 DROP TABLE IF EXISTS sys_role;
 DROP TABLE IF EXISTS sys_user;
+DROP TABLE IF EXISTS contract;
+DROP TABLE IF EXISTS credit_approval;
+DROP TABLE IF EXISTS credit_application;
 DROP TABLE IF EXISTS customer;
 DROP TABLE IF EXISTS account;
 DROP TABLE IF EXISTS transaction_record;
@@ -143,6 +146,66 @@ CREATE TABLE loan (
     KEY idx_customer_id (customer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='贷款表';
 
+CREATE TABLE credit_application (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    application_no  VARCHAR(32)     NOT NULL COMMENT '申请编号',
+    customer_id     BIGINT          NOT NULL COMMENT '客户ID',
+    credit_amount   DECIMAL(18,2)   NOT NULL COMMENT '申请授信金额',
+    credit_type     VARCHAR(20)     NOT NULL COMMENT '授信类型：WORKING-流动资金 LOAN-贷款 GUARANTEE-担保',
+    purpose         VARCHAR(500)    DEFAULT NULL COMMENT '申请用途',
+    status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1-待审批 2-已批复 3-已拒绝',
+    apply_time      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：1-已删除 0-未删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_application_no (application_no),
+    KEY idx_customer_id (customer_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='授信申请表';
+
+CREATE TABLE credit_approval (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    approval_no     VARCHAR(32)     NOT NULL COMMENT '批复编号',
+    application_id  BIGINT          NOT NULL COMMENT '授信申请ID',
+    customer_id     BIGINT          NOT NULL COMMENT '客户ID',
+    approved_amount DECIMAL(18,2)   NOT NULL COMMENT '批复金额',
+    credit_limit    DECIMAL(18,2)   NOT NULL COMMENT '授信额度',
+    start_date      DATE            NOT NULL COMMENT '有效期开始',
+    end_date        DATE            NOT NULL COMMENT '有效期结束',
+    status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1-有效 2-已过期 3-已撤销',
+    approval_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '批复时间',
+    remark          VARCHAR(500)    DEFAULT NULL COMMENT '批复意见',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：1-已删除 0-未删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_approval_no (approval_no),
+    KEY idx_application_id (application_id),
+    KEY idx_customer_id (customer_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='授信批复表';
+
+CREATE TABLE contract (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    contract_no     VARCHAR(32)     NOT NULL COMMENT '合同编号',
+    approval_id     BIGINT          NOT NULL COMMENT '授信批复ID',
+    customer_id     BIGINT          NOT NULL COMMENT '客户ID',
+    contract_amount DECIMAL(18,2)   NOT NULL COMMENT '合同金额',
+    contract_type   VARCHAR(20)     NOT NULL COMMENT '合同类型：CREDIT-授信合同 LOAN-贷款合同 GUARANTEE-担保合同',
+    sign_date       DATE            NOT NULL COMMENT '签订日期',
+    status          TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1-有效 2-已变更 3-已作废',
+    remark          VARCHAR(500)    DEFAULT NULL COMMENT '备注',
+    create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：1-已删除 0-未删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_contract_no (contract_no),
+    KEY idx_approval_id (approval_id),
+    KEY idx_customer_id (customer_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='合同表';
+
 -- =============================================
 -- 初始化角色
 -- =============================================
@@ -172,13 +235,21 @@ INSERT INTO sys_menu (id, parent_id, menu_name, path, component, icon, menu_type
 (5,  0, '贷款管理', NULL,             NULL,                    'BankCard',        1, 5, NULL),
 (6,  0, '报表统计', NULL,             NULL,                    'DataAnalysis',    1, 6, NULL),
 (7,  0, '系统管理', NULL,             NULL,                    'Setting',         1, 7, NULL),
+(8,  0, '授信管理', NULL,             NULL,                    'FolderOpened',    1, 8, NULL),
+(9,  0, '合同管理', NULL,             NULL,                    'DocumentCopy',    1, 9, NULL),
 -- 客户管理子菜单
 (21, 2, '客户列表', '/customer/list', 'customer/List.vue',     'List',            2, 1, 'customer:list'),
 (22, 2, '新增客户', '/customer/add',  'customer/Form.vue',     'Plus',            2, 2, 'customer:add'),
 -- 系统管理子菜单
 (71, 7, '用户管理', '/system/user',   'system/UserList.vue',   'UserFilled',      2, 1, 'system:user'),
 (72, 7, '角色管理', '/system/role',   'system/RoleList.vue',   'Avatar',          2, 2, 'system:role'),
-(73, 7, '菜单管理', '/system/menu',   'system/MenuList.vue',   'Menu',            2, 3, 'system:menu');
+(73, 7, '菜单管理', '/system/menu',   'system/MenuList.vue',   'Menu',            2, 3, 'system:menu'),
+-- 授信管理子菜单
+(81, 8, '授信申请', '/credit/application/list', 'credit/ApplicationList.vue', 'Document', 2, 1, 'credit:application'),
+(82, 8, '批复查询', '/credit/approval/list',    'credit/ApprovalList.vue',    'Checked',   2, 2, 'credit:approval'),
+-- 合同管理子菜单
+(91, 9, '合同列表', '/contract/list', 'contract/List.vue',     'Tickets',         2, 1, 'contract:list'),
+(92, 9, '合同签订', '/contract/add',  'contract/Form.vue',     'EditPen',         2, 2, 'contract:add');
 
 -- 为 admin 角色分配所有菜单权限
 INSERT INTO sys_role_menu (role_id, menu_id)
